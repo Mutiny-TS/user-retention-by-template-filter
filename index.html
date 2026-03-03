@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Retention Cohort Heatmaps</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0c0c0e;
+            --surface: #13131a;
+            --surface2: #1a1a24;
+            --border: #1e1e2e;
+            --border2: #252538;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --muted2: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            padding: 48px 40px 80px;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            margin-bottom: 48px;
+        }
+
+        .page-eyebrow {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #a78bfa;
+            margin-bottom: 10px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 10px;
+        }
+
+        .page-sub {
+            font-size: 14px;
+            color: var(--muted2);
+            line-height: 1.65;
+            max-width: 700px;
+        }
+
+        .page-sub strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        /* Heatmap */
+        .heatmap-block {
+            margin-bottom: 52px;
+        }
+
+        .heatmap-block+.heatmap-block {
+            padding-top: 48px;
+            border-top: 1px solid var(--border);
+        }
+
+        .hm-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+
+        .hm-segment-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            padding: 5px 12px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+        }
+
+        .hm-segment-pill.tmpl {
+            color: #a78bfa;
+            background: rgba(167, 59, 245, 0.1);
+            border: 1px solid rgba(167, 59, 245, 0.25);
+        }
+
+        .hm-segment-pill.notmpl {
+            color: #67e8f9;
+            background: rgba(6, 182, 212, 0.08);
+            border: 1px solid rgba(6, 182, 212, 0.2);
+        }
+
+        .hm-segment-pill .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .hm-segment-pill.tmpl .dot {
+            background: #a78bfa;
+        }
+
+        .hm-segment-pill.notmpl .dot {
+            background: #06b6d4;
+        }
+
+        .hm-title {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            margin-bottom: 4px;
+        }
+
+        .hm-meta {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .legend {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .legend-label {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .legend-bar-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-tick {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        .legend-bar {
+            width: 180px;
+            height: 14px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #e9d5ff 0%, #c084fc 20%, #a855f7 40%, #7c3aed 60%, #5b21b6 80%, #3b0764 100%);
+        }
+
+        .hm-table-wrap {
+            overflow-x: auto;
+        }
+
+        table.hm-table {
+            border-collapse: separate;
+            border-spacing: 6px;
+            min-width: 600px;
+        }
+
+        table.hm-table th {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            font-weight: 400;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            padding: 0 4px 10px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        table.hm-table th.col-cohort {
+            text-align: left;
+            min-width: 140px;
+            padding-right: 16px;
+        }
+
+        table.hm-table td {
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        table.hm-table td.row-label {
+            padding-right: 16px;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        .row-label-week {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .row-label-size {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            color: var(--muted);
+            display: block;
+        }
+
+        .cell {
+            width: 152px;
+            height: 76px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            cursor: default;
+            transition: filter 0.15s;
+        }
+
+        .cell:hover {
+            filter: brightness(1.1);
+        }
+
+        .cell-pct {
+            font-size: 20px;
+            font-weight: 800;
+            font-style: italic;
+            line-height: 1;
+            letter-spacing: -0.01em;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .cell-frac {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            line-height: 1;
+        }
+
+        .cell-empty {
+            width: 152px;
+            height: 76px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px dashed rgba(255, 255, 255, 0.07);
+        }
+
+        .obs-note {
+            margin-top: 16px;
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .obs-note strong {
+            color: var(--muted2);
+        }
+
+        /* ── Analysis ── */
+        .analysis-section {
+            margin-top: 72px;
+            padding-top: 56px;
+            border-top: 1px solid var(--border);
+        }
+
+        .analysis-eyebrow {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .analysis-heading {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 48px;
+        }
+
+        .q-block {
+            margin-bottom: 60px;
+        }
+
+        .q-block+.q-block {
+            padding-top: 52px;
+            border-top: 1px solid var(--border);
+        }
+
+        .q-label {
+            display: inline-block;
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--muted);
+            background: var(--surface2);
+            border: 1px solid var(--border2);
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+
+        .q-question {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            margin-bottom: 8px;
+        }
+
+        .q-verdict {
+            font-size: 14px;
+            color: var(--muted2);
+            line-height: 1.75;
+            max-width: 680px;
+            margin-bottom: 28px;
+        }
+
+        .q-verdict strong {
+            color: var(--text);
+            font-weight: 700;
+        }
+
+        .q-verdict em {
+            color: #a78bfa;
+            font-style: normal;
+            font-weight: 600;
+        }
+
+        /* KPI pair */
+        .kpi-pair {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            max-width: 520px;
+            margin-bottom: 4px;
+        }
+
+        .kpi-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 22px 20px 18px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+        }
+
+        .kpi-card.purple::after {
+            background: linear-gradient(90deg, #7c3aed, transparent);
+        }
+
+        .kpi-card.cyan::after {
+            background: linear-gradient(90deg, #06b6d4, transparent);
+        }
+
+        .kpi-label {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .kpi-val {
+            font-size: 36px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 6px;
+            letter-spacing: -0.02em;
+        }
+
+        .kpi-card.purple .kpi-val {
+            color: #a78bfa;
+        }
+
+        .kpi-card.cyan .kpi-val {
+            color: #22d3ee;
+        }
+
+        .kpi-desc {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        /* Bar chart */
+        .bar-chart {
+            max-width: 520px;
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .bar-bucket {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            color: var(--muted2);
+            min-width: 94px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .bar-track {
+            flex: 1;
+            height: 36px;
+            background: var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            gap: 8px;
+        }
+
+        .bar-pct {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 800;
+            color: white;
+            white-space: nowrap;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+        }
+
+        .bar-n {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            white-space: nowrap;
+        }
+
+        @media (max-width:640px) {
+            body {
+                padding: 28px 16px 60px;
+            }
+
+            .kpi-pair {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="page-header">
+        <div class="page-eyebrow">Cohort Analysis · Mar 3, 2026</div>
+        <div class="page-title">User Retention Cohort Heatmaps</div>
+        <p class="page-sub">
+            Users are cohorted by the week of their first creation event.
+            <strong>Retention = users active that week ÷ original Week 0 cohort size</strong> — the denominator never
+            changes.
+            Split by whether the user's company has ever created a template. Empty cells = not enough time has passed
+            yet.
+        </p>
+    </div>
+
+    <div id="heatmaps"></div>
+
+    <div class="analysis-section">
+        <div class="analysis-eyebrow">Key Questions</div>
+        <div class="analysis-heading">What the data tells us</div>
+
+        <div class="q-block">
+            <div class="q-label">Question 1</div>
+            <div class="q-question">Does using templates at all improve user retention?</div>
+            <div class="q-verdict">
+                <strong>Yes — by a significant margin.</strong> Users at companies that use templates come back at
+                nearly
+                <em>2.5× the rate</em> of users at companies that don't. By Week 1, template-company users retained at
+                <strong>38.5%</strong> versus just <strong>15.2%</strong> for non-template companies. By Week 2 that gap
+                holds — <strong>22.0% vs 6.5%</strong>. The pattern is consistent across every cohort in the heatmaps
+                above.
+            </div>
+            <div class="kpi-pair">
+                <div class="kpi-card purple">
+                    <div class="kpi-label">Week 1 retention · Template orgs</div>
+                    <div class="kpi-val">38.5%</div>
+                    <div class="kpi-desc">35 of 91 users still active one week later</div>
+                </div>
+                <div class="kpi-card cyan">
+                    <div class="kpi-label">Week 1 retention · Non-template orgs</div>
+                    <div class="kpi-val">15.2%</div>
+                    <div class="kpi-desc">61 of 402 users still active one week later</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="q-block">
+            <div class="q-label">Question 2</div>
+            <div class="q-question">Does the amount of template usage correlate with retention?</div>
+            <div class="q-verdict">
+                <strong>Yes — more templates, more users coming back.</strong> Companies with
+                <strong>zero templates</strong> saw only <strong>19.6%</strong> of their orgs return week-over-week.
+                Companies with <strong>6–14 templates</strong> saw <strong>87.5%</strong> return.
+                The more embedded templates are in a company's workflow, the more their users keep showing up.
+                The slight dip at 15+ is based on only 3 companies — too few to be conclusive.
+            </div>
+            <div class="bar-chart" id="q2bars"></div>
+        </div>
+    </div>
+
+    <script>
+        // ── Color scale: pale lavender (low) → deep dark purple (high) ──
+        function retentionColor(rate) {
+            const stops = [
+                [0.00, 233, 213, 255],
+                [0.20, 192, 132, 252],
+                [0.40, 168, 85, 247],
+                [0.60, 124, 58, 237],
+                [0.80, 91, 33, 182],
+                [1.00, 59, 7, 100],
+            ];
+            let lo = stops[0], hi = stops[stops.length - 1];
+            for (let i = 0; i < stops.length - 1; i++) {
+                if (rate >= stops[i][0] && rate <= stops[i + 1][0]) { lo = stops[i]; hi = stops[i + 1]; break; }
+            }
+            const f = (rate - lo[0]) / (hi[0] - lo[0] || 1);
+            const r = Math.round(lo[1] + (hi[1] - lo[1]) * f);
+            const g = Math.round(lo[2] + (hi[2] - lo[2]) * f);
+            const b = Math.round(lo[3] + (hi[3] - lo[3]) * f);
+            const isDark = rate > 0.45;
+            return {
+                bg: `rgb(${r},${g},${b})`,
+                text: isDark ? 'rgba(255,255,255,0.95)' : '#2e1065',
+                sub: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(46,16,101,0.55)'
+            };
+        }
+
+        const WEEKS = [0, 1, 2, 3];
+
+        const heatmaps = [
+            {
+                title: 'User Retention — Template Orgs',
+                pill: 'Template-using companies', pillClass: 'tmpl',
+                totalUsers: 91,
+                cohorts: [
+                    { label: 'Feb 2, 2026', cohortSize: 7, retained: { 0: 7, 1: 5, 2: 2, 3: 3 } },
+                    { label: 'Feb 9, 2026', cohortSize: 34, retained: { 0: 34, 1: 17, 2: 16, 3: 3 } },
+                    { label: 'Feb 16, 2026', cohortSize: 33, retained: { 0: 33, 1: 12, 2: 2, 3: null } },
+                    { label: 'Feb 23, 2026', cohortSize: 13, retained: { 0: 13, 1: 1, 2: null, 3: null } },
+                    { label: 'Mar 2, 2026', cohortSize: 4, retained: { 0: 4, 1: null, 2: null, 3: null } },
+                ]
+            },
+            {
+                title: 'User Retention — Non-Template Orgs',
+                pill: 'Non-template companies', pillClass: 'notmpl',
+                totalUsers: 402,
+                cohorts: [
+                    { label: 'Feb 9, 2026', cohortSize: 131, retained: { 0: 131, 1: 22, 2: 17, 3: 2 } },
+                    { label: 'Feb 16, 2026', cohortSize: 172, retained: { 0: 172, 1: 31, 2: 9, 3: null } },
+                    { label: 'Feb 23, 2026', cohortSize: 88, retained: { 0: 88, 1: 8, 2: null, 3: null } },
+                    { label: 'Mar 2, 2026', cohortSize: 11, retained: { 0: 11, 1: null, 2: null, 3: null } },
+                ]
+            }
+        ];
+
+        function buildHeatmap(hm) {
+            const block = document.createElement('div');
+            block.className = 'heatmap-block';
+            block.innerHTML = `
+    <div class="hm-header">
+      <div>
+        <div class="hm-segment-pill ${hm.pillClass}"><span class="dot"></span>${hm.pill}</div>
+        <div class="hm-title">${hm.title}</div>
+        <div class="hm-meta">${hm.cohorts.length} cohort weeks · ${hm.totalUsers} total users</div>
+      </div>
+      <div class="legend">
+        <div class="legend-label">Retention rate</div>
+        <div class="legend-bar-wrap">
+          <span class="legend-tick">Low</span>
+          <div class="legend-bar"></div>
+          <span class="legend-tick">High</span>
+        </div>
+      </div>
+    </div>`;
+
+            const wrap = document.createElement('div');
+            wrap.className = 'hm-table-wrap';
+            const table = document.createElement('table');
+            table.className = 'hm-table';
+
+            // Header
+            const thead = document.createElement('thead');
+            const hrow = document.createElement('tr');
+            const thc = document.createElement('th');
+            thc.className = 'col-cohort';
+            thc.textContent = 'Cohort week';
+            hrow.appendChild(thc);
+            WEEKS.forEach(w => {
+                const th = document.createElement('th');
+                th.textContent = `Week ${w}`;
+                hrow.appendChild(th);
+            });
+            thead.appendChild(hrow);
+            table.appendChild(thead);
+
+            // Body
+            const tbody = document.createElement('tbody');
+            hm.cohorts.forEach(cohort => {
+                const tr = document.createElement('tr');
+                const tdL = document.createElement('td');
+                tdL.className = 'row-label';
+                tdL.innerHTML = `<span class="row-label-week">${cohort.label}</span><span class="row-label-size">n = ${cohort.cohortSize} users</span>`;
+                tr.appendChild(tdL);
+
+                WEEKS.forEach(w => {
+                    const td = document.createElement('td');
+                    const ret = cohort.retained[w];
+                    if (ret === null || ret === undefined) {
+                        const e = document.createElement('div');
+                        e.className = 'cell-empty';
+                        td.appendChild(e);
+                    } else {
+                        const rate = ret / cohort.cohortSize;
+                        const col = retentionColor(rate);
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.style.background = col.bg;
+                        cell.innerHTML = `
+          <span class="cell-pct"  style="color:${col.text}">${(rate * 100).toFixed(1)}%</span>
+          <span class="cell-frac" style="color:${col.sub}">(${ret}/${cohort.cohortSize})</span>`;
+                        td.appendChild(cell);
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            wrap.appendChild(table);
+            block.appendChild(wrap);
+
+            const note = document.createElement('div');
+            note.className = 'obs-note';
+            note.innerHTML = `<strong>Denominator:</strong> constant original cohort size — never changes week to week. &nbsp;·&nbsp; <strong>Empty cells:</strong> not enough time has passed yet for that cohort.`;
+            block.appendChild(note);
+            return block;
+        }
+
+        document.getElementById('heatmaps').append(...heatmaps.map(buildHeatmap));
+
+        // ── Q2 bar chart ──
+        const buckets = [
+            { label: '0 templates', ret: 63, total: 374, note: '' },
+            { label: '1–2 templates', ret: 16, total: 30, note: '' },
+            { label: '3–5 templates', ret: 9, total: 11, note: '' },
+            { label: '6–14 templates', ret: 12, total: 13, note: '' },
+            { label: '15+ templates', ret: 3, total: 5, note: 'small n' },
+        ];
+
+        const barGradients = [
+            'linear-gradient(90deg,#1e1b4b,#2e1065)',
+            'linear-gradient(90deg,#3b0764,#4c1d95)',
+            'linear-gradient(90deg,#5b21b6,#6d28d9)',
+            'linear-gradient(90deg,#6d28d9,#7c3aed)',
+            'linear-gradient(90deg,#374151,#4b5563)',
+        ];
+
+        const cont = document.getElementById('q2bars');
+        const maxP = Math.max(...buckets.map(b => b.ret / b.total));
+        buckets.forEach((b, i) => {
+            const pct = b.ret / b.total;
+            const wPct = (pct / maxP * 100).toFixed(1) + '%';
+            const pStr = (pct * 100).toFixed(1) + '%';
+            const row = document.createElement('div');
+            row.className = 'bar-row';
+            row.innerHTML = `
+    <div class="bar-bucket">${b.label}</div>
+    <div class="bar-track">
+      <div class="bar-fill" style="width:${wPct};background:${barGradients[i]}">
+        <span class="bar-pct">${pStr}</span>
+        <span class="bar-n">${b.ret}/${b.total} orgs${b.note ? ' · ' + b.note : ''}</span>
+      </div>
+    </div>`;
+            cont.appendChild(row);
+        });
+    </script>
+</body>
+
+</html>
